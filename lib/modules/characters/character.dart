@@ -11,7 +11,7 @@ class Character with _$Character {
     required int id,
     required String name,
     required List<String> images,
-    @JsonKey(name: 'debut') Map<String, dynamic>? debut,
+    Map<String, dynamic>? debut,
   }) = _Character;
 
   factory Character.fromJson(Map<String, dynamic> json) =>

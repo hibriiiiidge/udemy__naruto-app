@@ -25,19 +25,42 @@ class MyHomePage extends StatefulWidget {
 
 class _MyHomePageState extends State<MyHomePage> {
   final _apiUrl = "http://localhost/character";
+  final _limit = 10;
+  final _controller = ScrollController();
+  int _page = 1;
+  bool _isLoading = false;
+
   List<Character> _characters = [];
 
   @override
   void initState() {
     super.initState();
     _fetchCharacters();
+    _controller.addListener(() {
+      if (_controller.position.maxScrollExtent - 100< _controller.offset) {
+        _fetchCharacters();
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    super.dispose();
+    _controller.dispose();
   }
 
   Future<void> _fetchCharacters() async {
-    final response = await Dio().get(_apiUrl);
-    final List<dynamic> data = response.data["characters"];
+    if (_isLoading) return;
     setState(() {
-      _characters = data.map((character) => Character.fromJson(character)).toList();
+      _isLoading = true;
+    });
+    final response = await Dio().get( _apiUrl, queryParameters: { "page": _page, "limit": _limit });
+    final List<dynamic> data = response.data["characters"];
+
+    setState(() {
+      _characters = [..._characters, ...data.map((character) => Character.fromJson(character)).toList()];
+      _page++;
+      _isLoading = false;
     });
   }
 
@@ -52,6 +75,7 @@ class _MyHomePageState extends State<MyHomePage> {
         body: Padding(
           padding: EdgeInsets.all(16),
           child: ListView.builder(
+            controller: _controller,
             itemCount: _characters.length,
             itemBuilder: (context, index) {
               final character = _characters[index];
@@ -61,16 +85,21 @@ class _MyHomePageState extends State<MyHomePage> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Center(
-                      child: Image.network(
-                        character.images[0],
-                        fit: BoxFit.contain,
-                        errorBuilder: (context, error, stackTrace) {
-                          return Image(
+                      child: character.images.isNotEmpty
+                        ? Image.network(
+                            character.images[0],
+                            fit: BoxFit.contain,
+                            errorBuilder: (context, error, stackTrace) {
+                              return Image(
+                                image: AssetImage('assets/dummy.png'),
+                                fit: BoxFit.contain,
+                              );
+                            },
+                          )
+                        : Image(
                             image: AssetImage('assets/dummy.png'),
                             fit: BoxFit.contain,
-                          );
-                        },
-                      )
+                          )
                     ),
                     Padding(
                       padding: const EdgeInsets.all(8.0),
